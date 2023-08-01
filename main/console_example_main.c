@@ -28,24 +28,24 @@ int parameters_number;
 int CLI_get_value(char *value_string, int datatype, float* f_val, int * int_val);
 void CLI_service_init();
 
+//TEST RESET COMMANDS
 void hard_reset();
 void soft_reset();
+
+//TEST INTEGER VALUE
+int test_RADIO_MUTE_DELAY = 25;
 int get_RADIO_MUTE_DELAY();
 int set_RADIO_MUTE_DELAY(int val);
+
+//TEST STRING VALUE
+char test_ECALL_TEST_NUMBER[20] = {0};
 char* get_ECALL_TEST_NUMBER();
 void set_ECALL_TEST_NUMBER(char *str_val);
+
+//TEST FLOAT VALUE
+float test_ASI15_TRESHOLD = 7.7f;
 float get_ASI15_TRESHOLD();
 float set_ASI15_TRESHOLD(float val);
-
-
-//!!!!!!!!!!!
-// TEST VALUES
-int test_RADIO_MUTE_DELAY = 25;
-char test_ECALL_TEST_NUMBER[20] = {0};
-float test_ASI15_TRESHOLD = 7.7f;
-
-//!!!!!!!!!!!!
-
 
 /*
 static const char *const PIN_enum_names[] = {             
@@ -60,8 +60,6 @@ static const char *const PIN_enum_names[] = {
     "PIN 8"
 };
 
-
-
 static const char *const STATES_enum_names[] = {             
     "ENABLED",
     "DISABLED"
@@ -71,7 +69,6 @@ static const char *const STATUS_enum_names[] = {
     "ACTIVE",
     "INACTIVE"
 };
-
 
 static const char *const GNSS_enum_names[] = {             
     "NO_FIX",
@@ -86,8 +83,6 @@ static const char *const GSM_enum_names[] = {
     "DENIED",
     "REG_ROAMING"
 };
-
-
 
 static const char *const FOTA_enum_names[] = {             
     "IDLE",
@@ -112,17 +107,10 @@ static const char *const CLI_cmd_service_names[] = {
     "ROUTINE"
 };
 
-
-
 char *const CLI_resp_status_names[] = {
     "NOK",
     "OK"
 }; 
-
-
-
-
-
 
 static const char *const CLI_cmd_service_opt2_names[] = {
     "NO_RESP",                
@@ -1077,9 +1065,7 @@ int CLI_get_value(char *value_string, int datatype, float* f_val, int * int_val)
         default:
             break;
     }
-
     return 1;
-
 }
 
 /* Console command history can be stored to and loaded from a file.
@@ -1163,7 +1149,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 }
 
-
 void CLI_service_init(){
     get_parameters_count();
 
@@ -1173,8 +1158,7 @@ void CLI_service_init(){
     register_write_set();
 }
 
-
-//TEST FUNCTUINS HERE
+//TEST RESETS
 void hard_reset(){
     printf("HARD_RESET_EXECUTION\r\n");
 };
@@ -1182,28 +1166,24 @@ void soft_reset(){
      printf("SOFT_RESET_EXECUTION\r\n");
 };
 
-
-
-//INTERGER VALUE
+//TEST INTERGER VALUE
 int get_RADIO_MUTE_DELAY() {
     return test_RADIO_MUTE_DELAY;
 };
-
 int set_RADIO_MUTE_DELAY(int val) {
     test_RADIO_MUTE_DELAY = val;
     return test_RADIO_MUTE_DELAY;
 };
 
-//STRING VALUE
+//TEST STRING VALUE
 char* get_ECALL_TEST_NUMBER() {
     return test_ECALL_TEST_NUMBER;
 };
-
 void set_ECALL_TEST_NUMBER(char *str_val) {
     sprintf(test_ECALL_TEST_NUMBER,str_val);
 };
 
-//FLOAT VALUE
+//TEST FLOAT VALUE
 float get_ASI15_TRESHOLD(){
     return test_ASI15_TRESHOLD;
 };
