@@ -36,6 +36,10 @@ void soft_reset();
 void set_control_cmd(int command_request);
 void return_control_cmd();
 
+//TEST ROUTINES COMMANDS
+void routines_START();
+void routines_RESULT();
+
 //TEST INTEGER VALUE
 int test_RADIO_MUTE_DELAY = 25;
 int get_RADIO_MUTE_DELAY();
@@ -80,8 +84,6 @@ static const char *const STATES_enum_names[] = {
     "DISABLED"
 };
 
-
-
 static const char *const GNSS_enum_names[] = {             
     "NO_FIX",
     "FIX_2D",
@@ -96,31 +98,9 @@ static const char *const GSM_enum_names[] = {
     "REG_ROAMING"
 };
 
-
-
 static const char *const MOUNT_enum_names[] = {             
     "NATIVE",
     "ADDITIONAL"
-};
-
-static const char *const CLI_cmd_service_names[] = {             
-    "READ",
-    "RESET",
-    "WRITE",
-    "CONTROL",
-    "ROUTINE"
-};
-
-char *const CLI_resp_status_names[] = {
-    "NOK",
-    "OK"
-}; 
-
-static const char *const CLI_cmd_service_opt2_names[] = {
-    "NO_RESP",                
-    "RESP",
-    "SET",
-    "RETURN"
 };
 
 */
@@ -394,7 +374,25 @@ static const char *const CLI_cmd_service_opt1_names[] = {
     "RESULT"
 }; 
 
+#define ROUTINES_CNT 6
 
+static const char *const CLI_cmd_routine_names[] = {
+    "EMERGENCY_CALL",
+    "GNSS_COLD_RESET",
+    "RESET_TO_NEW",
+    "CLEAR_MSD_MEMORY",
+    "START_GARAGE_MODE",
+    "ON_DEMAND_SELF_TEST"
+}; 
+
+typedef enum{
+    EMERGENCY_CALL,
+    GNSS_COLD_RESET,
+    RESET_TO_NEW,
+    CLEAR_MSD_MEMORY,
+    START_GARAGE_MODE,
+    ON_DEMAND_SELF_TEST
+} routines_enum; 
 
 static const char *const CLI_resp_err_names[] = {
     "UNKNOWN_ERROR",
@@ -407,7 +405,8 @@ static const char *const CLI_resp_err_names[] = {
     "RESET_CMD_INCORRECT",
     "TIMEOUT",
     "PARAMETER_NOT_EXIST",
-    "VALUE_FORMAT_NOT_VALID"
+    "VALUE_FORMAT_NOT_VALID",
+    "ROUTINE_NOT_EXIST"
 }; 
 
 typedef enum {
@@ -422,6 +421,7 @@ typedef enum {
     CLI_RESP_ERR_TIMEOUT,
     CLI_RESP_ERR_PARAMETER_NOT_EXIST,
     CLI_RESP_ERR_VALUE_FORMAT_NOT_VALID,
+    CLI_RESP_ERR_ROUTINE_NOT_EXIST,
 } CLI_resp_err;
 
 static struct {
@@ -447,6 +447,12 @@ static struct {
     struct arg_str *value;
     struct arg_end *end;
 } control_args;
+
+static struct {
+    struct arg_str *request;
+    struct arg_str *routine;
+    struct arg_end *end;
+} routine_args;
 
 void get_parameters_count(){
     parameters_number = sizeof(CLI_cmd_param_names)/sizeof(CLI_cmd_param_names[0]);
@@ -1020,7 +1026,7 @@ OK_response:
 } 
 
 int control_set(int argc, char **argv) {
-    int i = -1, j=-1;
+    int i = -1;
     int var_type = -1;
     bool SET_cmd = false;
     bool RETURN_cmd = false;
@@ -1125,6 +1131,78 @@ OK_response:
     return 0;
 } 
 
+static int routine_set(int argc, char **argv) {
+    int i = -1;
+    int command_request = -1;  //1 = START, 0 = RESULT;
+   
+    CLI_resp_err err_name = CLI_RESP_ERR_UNKNOWN_ERROR;
+
+    int nerrors = arg_parse(argc, argv, (void **) &routine_args);
+    if (nerrors != 0) {
+        err_name = CLI_RESP_ERR_COMMAND_INCORRECT;
+        goto NOK_response;
+    }
+
+    //GET REQUEST TYPE
+    if (routine_args.request->count) {
+        if(strstr(routine_args.request->sval[0],"START") != NULL){
+            command_request = 1;
+        } else if (strstr(routine_args.request->sval[0],"RESULT") != NULL) {
+            command_request = 0;
+        } else {
+            err_name = CLI_RESP_ERR_COMMAND_INCORRECT;
+            goto NOK_response;
+        }
+    }
+
+    //GET ROUTINE
+    if (routine_args.routine->count){
+        for(i=0;i<ROUTINES_CNT;i++){
+            if(strstr(routine_args.routine->sval[0],CLI_cmd_routine_names[i]) != NULL){
+                goto next;
+            }
+        }
+        err_name = CLI_RESP_ERR_ROUTINE_NOT_EXIST;
+        goto NOK_response;
+    }
+next:
+    switch(i){
+        case(EMERGENCY_CALL):
+            if(command_request==1){
+                routines_START();
+            } else if(command_request==0) {
+                routines_RESULT();
+            }
+            goto OK_response;
+            break;
+        case(GNSS_COLD_RESET):
+            break;
+        case(RESET_TO_NEW):
+            break;
+        case(CLEAR_MSD_MEMORY):
+            break;
+        case(START_GARAGE_MODE):
+            break;
+        case(ON_DEMAND_SELF_TEST):
+            break;
+        default:
+            break;
+    }
+
+NOK_response:
+    printf("ROUTINE NOK %s\r\n",CLI_resp_err_names[err_name]);
+    return 0;
+
+OK_response:
+    if(command_request == 1){
+        printf("ROUTINE OK START %s\r\n",CLI_cmd_routine_names[i]);
+    } else if (command_request == 0) {
+        printf("ROUTINE OK RESULT %s\r\n",CLI_cmd_routine_names[i]);
+    }
+    return 0;
+
+}
+
 static void register_reset_set(void)
 {
     int num_args = 1;
@@ -1189,6 +1267,23 @@ static void register_control_set(void)
         .hint = NULL,
         .func = &control_set,
         .argtable = &control_args
+    };
+    ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
+}
+
+static void register_routine_set(void)
+{
+    int num_args = 1;
+    routine_args.request = arg_str1(NULL, NULL, NULL, "REQUEST");
+    routine_args.routine = arg_str1(NULL, NULL, NULL, "ROUTINE NAME");
+    routine_args.end = arg_end(num_args);
+
+    const esp_console_cmd_t cmd = {
+        .command = "ROUTINE",
+        .help = "ROUTINE SERVICE",
+        .hint = NULL,
+        .func = &routine_set,
+        .argtable = &routine_args
     };
     ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
 }
@@ -1328,6 +1423,7 @@ void CLI_service_init(){
     register_read_set();
     register_write_set();
     register_control_set();
+    register_routine_set();
 }
 
 //TEST RESETS
@@ -1350,6 +1446,14 @@ void set_control_cmd(int command_request){
 };
 void return_control_cmd(){
     printf("RETURN to normal execution\r\n");
+};
+
+//TEST ROUTINES COMMANDS
+void routines_START(){
+    printf("START routines success\r\n");
+};
+void routines_RESULT(){
+    printf("RESULT routines success\r\n");
 };
 
 //TEST INTERGER VALUE
